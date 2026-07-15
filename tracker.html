@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steady — Food, Fitness & Shot Tracker</title>
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#506544">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    /* palette: Dawn / Sage / Tangerine / Moss / Light / Juniper */
+    --bg:#F2F0E2;
+    --surface:#FFF8F3;
+    --ink:#43502F;
+    --ink-soft:#7C8567;
+    --teal:#6D7B38;
+    --teal-deep:#506544;
+    --teal-tint:#E7EAD8;
+    --amber:#EC9907;
+    --amber-tint:#FBE7C2;
+    --rose:#EC9907;
+    --rose-tint:#FBE7C2;
+    --sage:#98B185;
+    --line:#E2E1CE;
+    --shadow: 0 1px 2px rgba(80,101,68,0.07), 0 8px 24px -12px rgba(80,101,68,0.20);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  #app{
+    font-family:'Manrope',sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    padding:0 0 60px 0;
+  }
+  .wrap{max-width:720px;margin:0 auto;padding:28px 20px 0;}
+  .top{
+    display:flex; align-items:baseline; justify-content:space-between; margin-bottom:18px;
+  }
+  .brand{
+    font-family:'Manrope',sans-serif; font-weight:800; font-size:24px; letter-spacing:-0.02em; color:var(--teal-deep);
+    letter-spacing:-0.01em;
+  }
+  .brand span{color:var(--rose);}
+  .today{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+
+  nav.tabs{
+    display:flex; gap:2px; background:var(--teal-tint); border-radius:14px; padding:4px;
+    margin-bottom:22px; overflow-x:auto;
+  }
+  nav.tabs button{
+    flex:1; border:none; background:transparent; padding:9px 8px; font-family:'Manrope';
+    font-size:12.5px; font-weight:600; color:var(--teal-deep); border-radius:10px; cursor:pointer;
+    white-space:nowrap; opacity:0.62; transition:all .15s ease;
+  }
+  nav.tabs button.active{background:var(--surface); opacity:1; box-shadow:var(--shadow);}
+  nav.tabs button:hover{opacity:1;}
+
+  .card{
+    background:var(--surface); border-radius:16px; padding:18px 20px; margin-bottom:14px;
+    box-shadow:var(--shadow); border:1px solid var(--line);
+  }
+  .card h2{
+    font-family:'Manrope',sans-serif; font-weight:700; font-size:15px; letter-spacing:-0.01em; margin:0 0 14px 0; color:var(--teal-deep);
+  }
+  .card h2 small{font-family:'Manrope'; font-weight:500; font-size:11px; color:var(--ink-soft); margin-left:6px;}
+
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
+
+  .stat{
+    background:var(--bg); border-radius:12px; padding:12px 14px; border:1px solid var(--line);
+  }
+  .stat .label{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.04em; font-weight:600;}
+  .stat .value{font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums; font-size:19px; font-weight:700; margin-top:4px; color:var(--ink);}
+  .stat .value small{font-size:12px; font-weight:500; color:var(--ink-soft);}
+
+  .bar-row{margin-bottom:12px;}
+  .bar-row:last-child{margin-bottom:0;}
+  .bar-label{display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:5px;}
+  .bar-label .name{font-weight:600; color:var(--ink);}
+  .bar-label .nums{font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums; font-weight:600; color:var(--ink-soft); font-size:11.5px;}
+  .bar-track{height:8px; background:var(--teal-tint); border-radius:6px; overflow:hidden;}
+  .bar-fill{height:100%; border-radius:6px; background:var(--teal); transition:width .3s ease;}
+  .bar-fill.amber{background:var(--amber);}
+  .bar-fill.rose{background:var(--rose);}
+
+  form.inline{display:flex; flex-direction:column; gap:10px;}
+  .field-row{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  label{font-size:11.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; display:block; margin-bottom:4px;}
+  input,select{
+    width:100%; padding:9px 10px; border:1px solid var(--line); border-radius:9px; font-family:'Manrope';
+    font-size:14px; background:var(--bg); color:var(--ink);
+  }
+  input:focus,select:focus{outline:2px solid var(--teal); outline-offset:1px; background:var(--surface);}
+  button.primary{
+    background:var(--teal); color:#fff; border:none; padding:10px 16px; border-radius:10px;
+    font-family:'Manrope'; font-weight:600; font-size:13.5px; cursor:pointer; margin-top:2px;
+  }
+  button.primary:hover{background:var(--teal-deep);}
+  button.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--ink-soft); padding:6px 10px;
+    border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;
+  }
+  button.ghost:hover{border-color:var(--rose); color:var(--rose);}
+
+  .entry-list{display:flex; flex-direction:column; gap:8px; margin-top:4px;}
+  .entry{
+    display:flex; justify-content:space-between; align-items:center; padding:10px 12px;
+    background:var(--bg); border-radius:10px; border:1px solid var(--line); font-size:13.5px;
+  }
+  .entry .main{font-weight:600;}
+  .entry .sub{color:var(--ink-soft); font-size:11.5px; font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums;}
+  .entry .meta{text-align:right; font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums; font-weight:700; font-size:12.5px; color:var(--teal-deep);}
+  .empty{color:var(--ink-soft); font-size:13px; font-style:italic; padding:10px 0;}
+
+  .tide{display:flex; gap:6px; margin-top:2px;}
+  .tide-day{flex:1; text-align:center;}
+  .tide-day .dow{font-size:10px; color:var(--ink-soft); font-weight:600; margin-bottom:6px; text-transform:uppercase;}
+  .tide-day .dot{
+    width:100%; height:34px; border-radius:8px; background:var(--teal-tint); position:relative;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tide-day .dot.done{background:var(--teal);}
+  .tide-day .dot.shot::after{
+    content:'💉'; font-size:13px;
+  }
+  .tide-day .dot .pct{font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums; font-size:9.5px; color:var(--teal-deep); font-weight:700;}
+  .tide-day .dot.done .pct{color:#fff;}
+
+  .goal-line{
+    display:flex; justify-content:space-between; align-items:center; padding:8px 0;
+    border-bottom:1px solid var(--line); font-size:13.5px;
+  }
+  .goal-line:last-child{border-bottom:none;}
+  .goal-line .g-label{color:var(--ink-soft); font-weight:600;}
+  .goal-line input{width:90px; text-align:right; font-family:'Manrope',sans-serif; font-variant-numeric:tabular-nums;}
+
+  .weight-svg-wrap{width:100%; overflow:hidden;}
+  .pill{
+    display:inline-block; padding:2px 8px; border-radius:20px; font-size:10.5px; font-weight:700;
+    background:var(--rose-tint); color:var(--teal-deep);
+  }
+  .pill.good{background:var(--teal-tint); color:var(--teal-deep);}
+  .next-shot{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .next-shot .big{font-family:'Manrope',sans-serif; font-size:30px; font-weight:800; letter-spacing:-0.02em; color:var(--teal-deep);}
+  .next-shot .big small{font-size:14px; font-family:'Manrope'; font-weight:500; color:var(--ink-soft);}
+
+  .footer-note{text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:10px;}
+  ::-webkit-scrollbar{height:6px;}
+
+  .photo-drop{
+    border:1.5px dashed var(--teal); border-radius:14px; padding:22px 16px; text-align:center;
+    cursor:pointer; background:var(--teal-tint); transition:background .15s ease;
+  }
+  .photo-drop:hover{background:var(--sage); opacity:0.85;}
+  .photo-drop .icon{font-size:26px; margin-bottom:6px;}
+  .photo-drop .txt{font-weight:600; font-size:13.5px; color:var(--teal-deep);}
+  .photo-drop .sub{font-size:11.5px; color:var(--ink-soft); margin-top:2px;}
+  .photo-preview-wrap{position:relative; margin-bottom:10px;}
+  .photo-preview-wrap img{
+    width:100%; max-height:220px; object-fit:cover; border-radius:14px; display:block; border:1px solid var(--line);
+  }
+  .photo-retake{
+    position:absolute; top:8px; right:8px; background:rgba(30,39,36,0.65); color:#fff; border:none;
+    padding:5px 10px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer;
+  }
+  .analyzing-row{display:flex; align-items:center; gap:10px; padding:10px 0; font-size:13px; color:var(--teal-deep); font-weight:600;}
+  .spinner{
+    width:16px; height:16px; border-radius:50%; border:2px solid var(--teal-tint); border-top-color:var(--teal);
+    animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .confidence-badge{
+    display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; text-transform:uppercase;
+    letter-spacing:.03em; margin-left:6px;
+  }
+  .confidence-badge.high{background:var(--teal-tint); color:var(--teal-deep);}
+  .confidence-badge.medium{background:var(--amber-tint); color:var(--teal-deep);}
+  .confidence-badge.low{background:var(--rose-tint); color:var(--teal-deep);}
+  .ai-note{
+    font-size:12px; color:var(--ink-soft); background:var(--bg); border:1px solid var(--line); border-radius:10px;
+    padding:9px 11px; margin:8px 0 2px; line-height:1.4;
+  }
+  .photo-error{
+    font-size:12.5px; color:var(--teal-deep); background:var(--rose-tint); border-radius:10px; padding:9px 11px; margin-bottom:8px;
+  }
+  @media (max-width:480px){
+    .grid3{grid-template-columns:1fr 1fr;}
+    .field-row{grid-template-columns:1fr;}
+  }
+
+  .auth-wrap{max-width:380px; margin:0 auto; padding:70px 20px 0;}
+  .auth-brand{font-family:'Manrope',sans-serif; font-weight:800; font-size:28px; letter-spacing:-0.02em; color:var(--teal-deep); text-align:center; margin-bottom:6px;}
+  .auth-brand span{color:var(--rose);}
+  .auth-sub{text-align:center; color:var(--ink-soft); font-size:13.5px; margin-bottom:26px;}
+  .auth-toggle-line{text-align:center; font-size:13px; color:var(--ink-soft); margin-top:14px;}
+  .auth-toggle-line a{color:var(--teal); font-weight:600; text-decoration:none;}
+  .sign-out-link{color:var(--teal-deep); font-weight:600; text-decoration:none; font-size:12.5px;}
+</style>
+</head>
+<body>
+
+<div id="app"><div class="wrap" id="root">Loading…</div></div>
+
+<script>
+const KEYS = {
+  settings:'settings',
+  food:'entries:food',
+  water:'entries:water',
+  exercise:'entries:exercise',
+  weight:'entries:weight',
+  shots:'entries:shots'
+};
+
+const DEFAULT_SETTINGS = {
+  calorieGoal:1600,
+  proteinGoal:120,
+  fiberGoal:28,
+  waterGoalOz:80,
+  startWeight:null,
+  goalWeight:null,
+  doseIntervalDays:7,
+  defaultDose:2.5,
+  units:'lb',
+  usdaApiKey:'',
+  anthropicApiKey:''
+};
+
+let state = {
+  settings: {...DEFAULT_SETTINGS},
+  food: [], water: [], exercise: [], weight: [], shots: []
+};
+
+// ---------- Firebase (optional multi-user login) ----------
+// Fill these in with your own Firebase project's config (Project Settings > General > Your apps > SDK setup)
+// to enable per-user login + cloud sync. Leave as-is to run single-user with local storage only.
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const firebaseEnabled = !!(firebaseConfig.apiKey && firebaseConfig.apiKey !== "YOUR_API_KEY");
+
+let fbAuth = null, fbDb = null;
+let currentUser = null;
+let authReady = !firebaseEnabled; // true once we know signed-in state (or immediately if firebase is off)
+let authView = 'signin'; // 'signin' | 'signup'
+let authError = null;
+let authBusy = false;
+
+if(firebaseEnabled){
+  firebase.initializeApp(firebaseConfig);
+  fbAuth = firebase.auth();
+  fbDb = firebase.firestore();
+  fbAuth.onAuthStateChanged(async (user)=>{
+    currentUser = user;
+    authReady = true;
+    if(user){
+      await loadAll();
+    }
+    render();
+  });
+}
+
+let activeTab = 'dashboard';
+
+let photoState = { previewUrl:null, analyzing:false, result:null, error:null };
+
+function resetPhotoState(){ photoState = { previewUrl:null, analyzing:false, result:null, error:null }; }
+
+let searchState = { query:'', results:[], loading:false, error:null, selected:null };
+
+function resetSearchState(){ searchState = { query:'', results:[], loading:false, error:null, selected:null }; }
+
+let progressRange = '7';
+let progressSelectedDate = null;
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function todayKey(d=new Date()){ return d.toISOString().slice(0,10); }
+function fmtDate(k){
+  const d = new Date(k+'T12:00:00');
+  return d.toLocaleDateString(undefined,{month:'short',day:'numeric'});
+}
+function fmtDow(k){
+  const d = new Date(k+'T12:00:00');
+  return d.toLocaleDateString(undefined,{weekday:'short'}).slice(0,2);
+}
+
+function hasPlatformStorage(){
+  return !!(window.storage && typeof window.storage.get === 'function');
+}
+
+async function loadAll(){
+  if(firebaseEnabled && currentUser){
+    try{
+      const docSnap = await fbDb.collection('trackerUsers').doc(currentUser.uid).get();
+      const data = docSnap.exists ? docSnap.data() : {};
+      state.settings = data.settings ? {...DEFAULT_SETTINGS, ...data.settings} : {...DEFAULT_SETTINGS};
+      state.food = data.food || [];
+      state.water = data.water || [];
+      state.exercise = data.exercise || [];
+      state.weight = data.weight || [];
+      state.shots = data.shots || [];
+      return;
+    }catch(e){
+      console.error('firestore load failed', e);
+      // fall through to local storage as a backup so the app still functions
+    }
+  }
+  if(hasPlatformStorage()){
+    const gets = await Promise.all(Object.entries(KEYS).map(async ([k,storageKey])=>{
+      try{
+        const res = await window.storage.get(storageKey, false);
+        return [k, res ? JSON.parse(res.value) : (k==='settings'? null : [])];
+      }catch(e){
+        return [k, k==='settings'? null : []];
+      }
+    }));
+    gets.forEach(([k,v])=>{
+      if(k==='settings'){ state.settings = v ? {...DEFAULT_SETTINGS,...v} : {...DEFAULT_SETTINGS}; }
+      else { state[k] = v || []; }
+    });
+  } else {
+    Object.entries(KEYS).forEach(([k,storageKey])=>{
+      try{
+        const raw = localStorage.getItem(storageKey);
+        if(k==='settings'){ state.settings = raw ? {...DEFAULT_SETTINGS, ...JSON.parse(raw)} : {...DEFAULT_SETTINGS}; }
+        else { state[k] = raw ? JSON.parse(raw) : []; }
+      }catch(e){
+        console.error('local load failed', k, e);
+        if(k==='settings') state.settings = {...DEFAULT_SETTINGS};
+        else state[k] = [];
+      }
+    });
+  }
+}
+
+async function save(key){
+  const storageKey = KEYS[key];
+  const value = key==='settings' ? state.settings : state[key];
+  if(firebaseEnabled && currentUser){
+    try{
+      await fbDb.collection('trackerUsers').doc(currentUser.uid).set({[key]:value}, {merge:true});
+      return;
+    }catch(e){ console.error('firestore save failed', key, e); }
+  }
+  if(hasPlatformStorage()){
+    try{
+      await window.storage.set(storageKey, JSON.stringify(value), false);
+    }catch(e){ console.error('save failed', key, e); }
+  } else {
+    try{
+      localStorage.setItem(storageKey, JSON.stringify(value));
+    }catch(e){ console.error('local save failed', key, e); }
+  }
+}
+
+function setTab(t){ activeTab = t; render(); }
+
+// ---------- computations ----------
+function entriesForDate(list, dateKey){ return list.filter(e=>e.date===dateKey); }
+
+function dayTotals(dateKey){
+  const f = entriesForDate(state.food, dateKey);
+  return f.reduce((acc,e)=>{
+    acc.calories += Number(e.calories)||0;
+    acc.protein += Number(e.protein)||0;
+    acc.carbs += Number(e.carbs)||0;
+    acc.fat += Number(e.fat)||0;
+    acc.fiber += Number(e.fiber)||0;
+    return acc;
+  },{calories:0,protein:0,carbs:0,fat:0,fiber:0});
+}
+
+function waterForDate(dateKey){
+  return entriesForDate(state.water, dateKey).reduce((a,e)=>a+(Number(e.amountOz)||0),0);
+}
+
+function lastShot(){
+  if(!state.shots.length) return null;
+  return [...state.shots].sort((a,b)=>b.date.localeCompare(a.date))[0];
+}
+
+function nextShotInfo(){
+  const last = lastShot();
+  if(!last) return null;
+  const interval = state.settings.doseIntervalDays || 7;
+  const lastDate = new Date(last.date+'T12:00:00');
+  const next = new Date(lastDate.getTime() + interval*86400000);
+  const today = new Date(todayKey()+'T12:00:00');
+  const diffDays = Math.round((next-today)/86400000);
+  return { nextDate: todayKey(next), diffDays, lastDose: last.dose, lastSite: last.site };
+}
+
+function last7Dates(){
+  const arr=[];
+  for(let i=6;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate()-i);
+    arr.push(todayKey(d));
+  }
+  return arr;
+}
+
+function latestWeight(){
+  if(!state.weight.length) return null;
+  return [...state.weight].sort((a,b)=>b.date.localeCompare(a.date))[0];
+}
+
+function weightChange(){
+  const w = [...state.weight].sort((a,b)=>a.date.localeCompare(b.date));
+  if(w.length<1) return null;
+  const first = state.settings.startWeight!=null ? state.settings.startWeight : w[0].weight;
+  const last = w[w.length-1].weight;
+  return { first, last, delta: last-first };
+}
+
+// ---------- progress / archive ----------
+function allLoggedDates(){
+  const set = new Set();
+  [...state.food, ...state.water, ...state.exercise, ...state.weight, ...state.shots].forEach(e=>set.add(e.date));
+  return [...set].sort();
+}
+
+function rangeDates(rangeKey){
+  if(rangeKey==='all'){
+    const logged = allLoggedDates();
+    if(!logged.length) return [todayKey()];
+    const arr=[];
+    const start = new Date(logged[0]+'T12:00:00');
+    const end = new Date();
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){ arr.push(todayKey(new Date(d))); }
+    return arr;
+  }
+  const n = Number(rangeKey);
+  const arr=[];
+  for(let i=n-1;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); arr.push(todayKey(d)); }
+  return arr;
+}
+
+function aggregateForRange(dates){
+  let sumCal=0,sumProt=0,sumFiber=0,sumWater=0,totalExMin=0,daysWithFood=0;
+  dates.forEach(dk=>{
+    const t = dayTotals(dk);
+    if(t.calories>0) daysWithFood++;
+    sumCal+=t.calories; sumProt+=t.protein; sumFiber+=t.fiber;
+    sumWater += waterForDate(dk);
+    totalExMin += entriesForDate(state.exercise,dk).reduce((a,e)=>a+(Number(e.duration)||0),0);
+  });
+  const n = dates.length||1;
+  return {
+    avgCalories: sumCal/n, avgProtein: sumProt/n, avgFiber: sumFiber/n, avgWater: sumWater/n,
+    totalExerciseMin: totalExMin, daysWithFood, daysInRange:n
+  };
+}
+
+function weightChangeForRange(dates){
+  const set = new Set(dates);
+  const w = state.weight.filter(e=>set.has(e.date)).sort((a,b)=>a.date.localeCompare(b.date));
+  if(w.length<1) return null;
+  return { first:w[0].weight, last:w[w.length-1].weight, delta:w[w.length-1].weight-w[0].weight, count:w.length };
+}
+
+function dailyBarSvg(dates, values, opts){
+  opts = opts||{};
+  const W=640,H=110,pad=16;
+  const max = Math.max(...values, opts.goal||0, 1);
+  const gap = (W-pad*2)/dates.length;
+  const barW = Math.max(1.5, gap*0.68);
+  const bars = dates.map((dk,i)=>{
+    const v = values[i]||0;
+    const h = (v/max)*(H-pad*2);
+    const x = pad + i*gap + (gap-barW)/2;
+    const y = H-pad-h;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" rx="2" fill="${opts.color||'var(--teal)'}"/>`;
+  }).join('');
+  let goalLine='';
+  if(opts.goal){
+    const gy = H-pad-(opts.goal/max)*(H-pad*2);
+    goalLine = `<line x1="${pad}" y1="${gy.toFixed(1)}" x2="${W-pad}" y2="${gy.toFixed(1)}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
+  }
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">${bars}${goalLine}</svg>`;
+}
+
+function exportJSON(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    settings: state.settings,
+    food: state.food, water: state.water, exercise: state.exercise, weight: state.weight, shots: state.shots
+  };
+  downloadBlob(JSON.stringify(payload,null,2), 'application/json', `steady-data-${todayKey()}.json`);
+}
+
+function toCsvCell(v){
+  const s = String(v??'');
+  return (s.includes(',')||s.includes('"')||s.includes('\n')) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+
+function exportCSV(){
+  const rows = [['date','time','food','calories','protein_g','carbs_g','fat_g','fiber_g']];
+  [...state.food].sort((a,b)=> a.date===b.date ? (a.time||'').localeCompare(b.time||'') : a.date.localeCompare(b.date))
+    .forEach(e=> rows.push([e.date,e.time||'',e.name,e.calories,e.protein,e.carbs,e.fat,e.fiber]));
+  const csv = rows.map(r=>r.map(toCsvCell).join(',')).join('\n');
+  downloadBlob(csv, 'text/csv', `steady-food-log-${todayKey()}.csv`);
+}
+
+function downloadBlob(content, mime, filename){
+  const blob = new Blob([content], {type:mime});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ---------- SVG weight chart ----------
+function weightChartSvg(){
+  const w = [...state.weight].sort((a,b)=>a.date.localeCompare(b.date));
+  const W=640,H=140,pad=24;
+  if(w.length<2){
+    return `<div class="empty">Log at least two weigh-ins to see your trend line.</div>`;
+  }
+  const weights = w.map(e=>e.weight);
+  let min = Math.min(...weights), max = Math.max(...weights);
+  if(state.settings.goalWeight!=null){ min = Math.min(min, state.settings.goalWeight); max = Math.max(max, state.settings.goalWeight); }
+  if(min===max){ min-=2; max+=2; }
+  const range = max-min;
+  const stepX = (W-pad*2)/(w.length-1);
+  const pts = w.map((e,i)=>{
+    const x = pad + i*stepX;
+    const y = H-pad - ((e.weight-min)/range)*(H-pad*2);
+    return [x,y];
+  });
+  const path = pts.map((p,i)=> (i===0?'M':'L')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  let goalLine='';
+  if(state.settings.goalWeight!=null){
+    const gy = H-pad - ((state.settings.goalWeight-min)/range)*(H-pad*2);
+    goalLine = `<line x1="${pad}" y1="${gy.toFixed(1)}" x2="${W-pad}" y2="${gy.toFixed(1)}" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4 4"/>
+    <text x="${W-pad}" y="${(gy-6).toFixed(1)}" text-anchor="end" font-size="10" fill="var(--amber)" font-family="Manrope">goal ${state.settings.goalWeight}</text>`;
+  }
+  const dots = pts.map(p=>`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--teal)"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" xmlns="http://www.w3.org/2000/svg">
+    <path d="${path}" fill="none" stroke="var(--teal)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    ${goalLine}
+    ${dots}
+  </svg>`;
+}
+
+// ---------- render ----------
+function pct(n,d){ if(!d) return 0; return Math.max(0,Math.min(100, Math.round((n/d)*100))); }
+
+function render(){
+  const root = document.getElementById('root');
+
+  if(firebaseEnabled && !authReady){
+    root.innerHTML = `<div class="auth-wrap"><div class="card">Loading…</div></div>`;
+    return;
+  }
+  if(firebaseEnabled && !currentUser){
+    root.innerHTML = renderAuthScreen();
+    bindAuthEvents();
+    return;
+  }
+
+  root.innerHTML = `
+    <div class="top">
+      <div class="brand">Steady<span>.</span></div>
+      <div class="today">
+        ${new Date().toLocaleDateString(undefined,{weekday:'long', month:'short', day:'numeric'})}
+        ${firebaseEnabled && currentUser ? ` · <a href="#" class="sign-out-link" id="sign-out-link">Sign out</a>` : ''}
+      </div>
+    </div>
+    <nav class="tabs">
+      ${['dashboard','food','water','exercise','weight','shot','progress','settings'].map(t=>
+        `<button class="${activeTab===t?'active':''}" data-tab="${t}">${label(t)}</button>`
+      ).join('')}
+    </nav>
+    <div id="tabbody">${renderTab(activeTab)}</div>
+  `;
+  root.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click', ()=>setTab(b.dataset.tab)));
+  const signOutLink = document.getElementById('sign-out-link');
+  if(signOutLink){
+    signOutLink.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      await fbAuth.signOut();
+      activeTab = 'dashboard';
+    });
+  }
+  bindTabEvents(activeTab);
+}
+
+function renderAuthScreen(){
+  const isSignup = authView==='signup';
+  return `
+    <div class="auth-wrap">
+      <div class="auth-brand">Steady<span>.</span></div>
+      <div class="auth-sub">${isSignup ? 'Create your account to start tracking' : 'Sign in to your tracker'}</div>
+      <div class="card">
+        ${authError ? `<div class="photo-error">${escapeHtml(authError)}</div>` : ''}
+        <form id="auth-form" class="inline">
+          <div><label>Email</label><input name="email" type="email" autocomplete="email" required></div>
+          <div><label>Password</label><input name="password" type="password" autocomplete="${isSignup?'new-password':'current-password'}" minlength="6" required></div>
+          <button class="primary" type="submit" ${authBusy?'disabled':''}>${authBusy ? 'Please wait…' : (isSignup ? 'Create account' : 'Sign in')}</button>
+        </form>
+      </div>
+      <div class="auth-toggle-line">
+        ${isSignup ? 'Already have an account?' : "Don't have an account?"}
+        <a href="#" id="auth-toggle">${isSignup ? 'Sign in' : 'Create one'}</a>
+      </div>
+    </div>
+  `;
+}
+
+function bindAuthEvents(){
+  const form = document.getElementById('auth-form');
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const email = fd.get('email');
+    const password = fd.get('password');
+    authBusy = true; authError = null; render();
+    try{
+      if(authView==='signup'){
+        await fbAuth.createUserWithEmailAndPassword(email, password);
+      } else {
+        await fbAuth.signInWithEmailAndPassword(email, password);
+      }
+      // onAuthStateChanged handles loading data + re-rendering
+    }catch(e){
+      authError = e.message || 'Something went wrong — try again.';
+      authBusy = false;
+      render();
+    }
+  });
+  document.getElementById('auth-toggle').addEventListener('click', (e)=>{
+    e.preventDefault();
+    authView = authView==='signup' ? 'signin' : 'signup';
+    authError = null;
+    render();
+  });
+}
+
+function label(t){
+  return {dashboard:'Today', food:'Food', water:'Water', exercise:'Exercise', weight:'Weigh-in', shot:'Shot', progress:'Progress', settings:'Goals'}[t];
+}
+
+function renderTab(t){
+  if(t==='dashboard') return renderDashboard();
+  if(t==='food') return renderFood();
+  if(t==='water') return renderWater();
+  if(t==='exercise') return renderExercise();
+  if(t==='weight') return renderWeight();
+  if(t==='shot') return renderShot();
+  if(t==='progress') return renderProgress();
+  if(t==='settings') return renderSettings();
+  return '';
+}
+
+function renderDashboard(){
+  const s = state.settings;
+  const t = dayTotals(todayKey());
+  const water = waterForDate(todayKey());
+  const wChange = weightChange();
+  const next = nextShotInfo();
+  const week = last7Dates();
+
+  return `
+    <div class="card">
+      <h2>Today's intake <small>vs. your goals</small></h2>
+      <div class="bar-row">
+        <div class="bar-label"><span class="name">Calories</span><span class="nums">${Math.round(t.calories)} / ${s.calorieGoal}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(t.calories,s.calorieGoal)}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span class="name">Protein</span><span class="nums">${Math.round(t.protein)}g / ${s.proteinGoal}g</span></div>
+        <div class="bar-track"><div class="bar-fill amber" style="width:${pct(t.protein,s.proteinGoal)}%"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span class="name">Fiber</span><span class="nums">${Math.round(t.fiber)}g / ${s.fiberGoal}g</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(t.fiber,s.fiberGoal)}%; background:var(--sage)"></div></div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label"><span class="name">Water</span><span class="nums">${Math.round(water)} / ${s.waterGoalOz} oz</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(water,s.waterGoalOz)}%; background:var(--teal-deep)"></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>This week</h2>
+      <div class="tide">
+        ${week.map(dk=>{
+          const dt = dayTotals(dk);
+          const w = waterForDate(dk);
+          const shotDay = state.shots.some(sh=>sh.date===dk);
+          const goalPct = pct(dt.calories, s.calorieGoal);
+          const done = goalPct>=60 || w>0;
+          return `<div class="tide-day">
+            <div class="dow">${fmtDow(dk)}</div>
+            <div class="dot ${done?'done':''} ${shotDay?'shot':''}">
+              ${!shotDay ? `<span class="pct">${goalPct||''}</span>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="grid2">
+      <div class="card" style="margin-bottom:0;">
+        <h2>Weight</h2>
+        ${latestWeight() ? `
+          <div class="stat" style="border:none; background:transparent; padding:0;">
+            <div class="value">${latestWeight().weight}<small> ${s.units}</small></div>
+            ${wChange ? `<div class="pill ${wChange.delta<=0?'good':''}" style="margin-top:6px;">${wChange.delta<=0?'−':'+'}${Math.abs(wChange.delta).toFixed(1)} ${s.units} since start</div>` : ''}
+          </div>
+        ` : `<div class="empty">No weigh-ins yet.</div>`}
+      </div>
+      <div class="card" style="margin-bottom:0;">
+        <h2>Next shot</h2>
+        ${next ? `
+          <div class="next-shot">
+            <div class="big">${next.diffDays<=0? 'Today' : next.diffDays+'d'}<small><br>${fmtDate(next.nextDate)}</small></div>
+          </div>
+          <div class="footer-note" style="text-align:left; margin-top:6px;">Last: ${next.lastDose}mg · ${next.lastSite||'—'}</div>
+        ` : `<div class="empty">No shots logged yet.</div>`}
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Weight trend</h2>
+      <div class="weight-svg-wrap">${weightChartSvg()}</div>
+    </div>
+  `;
+}
+
+function renderFood(){
+  const today = entriesForDate(state.food, todayKey()).sort((a,b)=> (b.time||'').localeCompare(a.time||''));
+  const sv = searchState.selected ? currentSearchValues() : null;
+  const r = sv || photoState.result;
+  return `
+    <div class="card">
+      <h2>Snap a photo <small>AI-estimated macros</small></h2>
+      ${photoState.previewUrl ? `
+        <div class="photo-preview-wrap">
+          <img src="${photoState.previewUrl}" alt="Food photo">
+          <button class="photo-retake" id="photo-retake">Retake</button>
+        </div>
+      ` : `
+        <label class="photo-drop" id="photo-drop-label">
+          <div class="icon">📷</div>
+          <div class="txt">Take or upload a photo</div>
+          <div class="sub">I'll estimate calories, protein, carbs, fat & fiber</div>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;">
+        </label>
+      `}
+      ${photoState.analyzing ? `<div class="analyzing-row"><div class="spinner"></div> Analyzing your photo…</div>` : ''}
+      ${photoState.error ? `<div class="photo-error">${escapeHtml(photoState.error)}</div>` : ''}
+      ${photoState.result ? `<div class="ai-note">
+        <strong>${escapeHtml(photoState.result.name||'Estimate')}</strong>
+        <span class="confidence-badge ${photoState.result.confidence||'medium'}">${photoState.result.confidence||'medium'} confidence</span>
+        <div style="margin-top:4px;">${escapeHtml(photoState.result.notes||'')} Review and adjust the numbers below before saving.</div>
+      </div>` : ''}
+    </div>
+
+    <div class="card">
+      <h2>Search food database <small>USDA FoodData Central</small></h2>
+      ${!state.settings.usdaApiKey ? `
+        <div class="ai-note">Add a free USDA API key in <strong>Goals</strong> to search 300,000+ foods and branded products. <a href="https://api.data.gov/signup/" target="_blank" rel="noopener">Get a free key</a> — takes about 30 seconds.</div>
+      ` : `
+        <div style="display:flex; gap:8px;">
+          <input id="food-search-input" placeholder="e.g. grilled chicken breast" value="${escapeHtml(searchState.query||'')}" style="flex:1;">
+          <button class="primary" id="food-search-btn" style="margin-top:0; white-space:nowrap;">Search</button>
+        </div>
+        ${searchState.loading ? `<div class="analyzing-row"><div class="spinner"></div> Searching…</div>` : ''}
+        ${searchState.error ? `<div class="photo-error">${escapeHtml(searchState.error)}</div>` : ''}
+        ${searchState.results.length ? `
+          <div class="entry-list" style="margin-top:10px;">
+            ${searchState.results.map((f,i)=>`
+              <div class="entry" data-pick-food="${i}" style="cursor:pointer;">
+                <div>
+                  <div class="main">${escapeHtml(f.description)}</div>
+                  <div class="sub">${f.brandName ? escapeHtml(f.brandName)+' · ' : ''}${f.dataType||''}</div>
+                </div>
+                <div class="meta">Select →</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${searchState.selected ? `
+          <div class="ai-note" style="margin-top:10px;">
+            <strong>${escapeHtml(searchState.selected.name)}</strong>
+            <button class="ghost" id="search-clear" style="float:right;">Clear</button>
+            <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+              <label style="margin:0; text-transform:none; font-weight:600; font-size:12px; color:var(--ink-soft);">${searchState.selected.basis==='per100g' ? 'Grams eaten' : 'Servings eaten'}</label>
+              <input id="search-amount" type="number" min="0" step="${searchState.selected.basis==='per100g' ? '1' : '0.25'}" value="${searchState.selected.amount}" style="width:80px;">
+            </div>
+          </div>
+        ` : ''}
+      `}
+    </div>
+
+    <div class="card">
+      <h2>Log food</h2>
+      <form id="food-form" class="inline">
+        <div>
+          <label>Food / meal</label>
+          <input name="name" placeholder="Grilled chicken & rice" value="${r? escapeHtml(r.name||'') : ''}" required>
+        </div>
+        <div class="field-row">
+          <div><label>Calories</label><input name="calories" type="number" min="0" step="1" value="${r? Math.round(r.calories||0) : ''}" required></div>
+          <div><label>Protein (g)</label><input name="protein" type="number" min="0" step="0.1" value="${r? (r.protein||0) : ''}"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Carbs (g)</label><input name="carbs" type="number" min="0" step="0.1" value="${r? (r.carbs||0) : ''}"></div>
+          <div><label>Fat (g)</label><input name="fat" type="number" min="0" step="0.1" value="${r? (r.fat||0) : ''}"></div>
+        </div>
+        <div class="field-row">
+          <div><label>Fiber (g)</label><input name="fiber" type="number" min="0" step="0.1" value="${r? (r.fiber||0) : ''}"></div>
+          <div><label>Time</label><input name="time" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+        </div>
+        <button class="primary" type="submit">Add entry</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Today <small>${today.length} ${today.length===1?'entry':'entries'}</small></h2>
+      <div class="entry-list">
+        ${today.length? today.map(e=>`
+          <div class="entry">
+            <div>
+              <div class="main">${escapeHtml(e.name)}</div>
+              <div class="sub">${e.time||''} · P${e.protein||0} C${e.carbs||0} F${e.fat||0} · fiber ${e.fiber||0}g</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="meta">${e.calories} cal</div>
+              <button class="ghost" data-del-food="${e.id}">×</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty">Nothing logged yet today.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderWater(){
+  const today = entriesForDate(state.water, todayKey()).sort((a,b)=> (b.time||'').localeCompare(a.time||''));
+  const total = waterForDate(todayKey());
+  return `
+    <div class="card">
+      <h2>Add water</h2>
+      <div class="grid3" style="margin-bottom:10px;">
+        ${[8,16,24].map(oz=>`<button class="ghost" data-quick-water="${oz}" style="padding:14px; font-size:15px;">+${oz} oz</button>`).join('')}
+      </div>
+      <form id="water-form" class="inline">
+        <div class="field-row">
+          <div><label>Amount (oz)</label><input name="amountOz" type="number" min="0" step="1" required></div>
+          <div><label>Time</label><input name="time" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+        </div>
+        <button class="primary" type="submit">Add</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Today <small>${total} oz total</small></h2>
+      <div class="entry-list">
+        ${today.length? today.map(e=>`
+          <div class="entry">
+            <div class="main">${e.amountOz} oz</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="meta">${e.time||''}</div>
+              <button class="ghost" data-del-water="${e.id}">×</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty">No water logged yet today.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderExercise(){
+  const today = entriesForDate(state.exercise, todayKey()).sort((a,b)=> (b.time||'').localeCompare(a.time||''));
+  return `
+    <div class="card">
+      <h2>Log exercise</h2>
+      <form id="ex-form" class="inline">
+        <div class="field-row">
+          <div><label>Type</label><input name="type" placeholder="Walk, lift, swim…" required></div>
+          <div><label>Duration (min)</label><input name="duration" type="number" min="0" step="1" required></div>
+        </div>
+        <div><label>Time</label><input name="time" type="time" value="${new Date().toTimeString().slice(0,5)}"></div>
+        <button class="primary" type="submit">Add entry</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Today</h2>
+      <div class="entry-list">
+        ${today.length? today.map(e=>`
+          <div class="entry">
+            <div>
+              <div class="main">${escapeHtml(e.type)}</div>
+              <div class="sub">${e.time||''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="meta">${e.duration} min</div>
+              <button class="ghost" data-del-exercise="${e.id}">×</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty">No exercise logged yet today.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderWeight(){
+  const list = [...state.weight].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
+  return `
+    <div class="card">
+      <h2>Log weigh-in</h2>
+      <form id="weight-form" class="inline">
+        <div class="field-row">
+          <div><label>Weight (${state.settings.units})</label><input name="weight" type="number" min="0" step="0.1" required></div>
+          <div><label>Date</label><input name="date" type="date" value="${todayKey()}"></div>
+        </div>
+        <button class="primary" type="submit">Save</button>
+      </form>
+    </div>
+    <div class="card">
+      <h2>Trend</h2>
+      <div class="weight-svg-wrap">${weightChartSvg()}</div>
+    </div>
+    <div class="card">
+      <h2>History</h2>
+      <div class="entry-list">
+        ${list.length? list.map(e=>`
+          <div class="entry">
+            <div class="main">${fmtDate(e.date)}</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="meta">${e.weight} ${state.settings.units}</div>
+              <button class="ghost" data-del-weight="${e.id}">×</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty">No weigh-ins yet.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderShot(){
+  const list = [...state.shots].sort((a,b)=>b.date.localeCompare(a.date));
+  const next = nextShotInfo();
+  return `
+    <div class="card">
+      <h2>Log Zepbound shot</h2>
+      <form id="shot-form" class="inline">
+        <div class="field-row">
+          <div><label>Dose (mg)</label>
+            <select name="dose">
+              ${[2.5,5,7.5,10,12.5,15].map(d=>`<option value="${d}" ${d===state.settings.defaultDose?'selected':''}>${d} mg</option>`).join('')}
+            </select>
+          </div>
+          <div><label>Date</label><input name="date" type="date" value="${todayKey()}"></div>
+        </div>
+        <div>
+          <label>Injection site</label>
+          <select name="site">
+            <option>Abdomen</option>
+            <option>Thigh</option>
+            <option>Upper arm</option>
+          </select>
+        </div>
+        <button class="primary" type="submit">Save shot</button>
+      </form>
+    </div>
+    ${next ? `<div class="card">
+      <h2>Next dose due</h2>
+      <div class="next-shot">
+        <div class="big">${next.diffDays<=0?'Today':next.diffDays+' days'}<small><br>${fmtDate(next.nextDate)}</small></div>
+      </div>
+    </div>` : ''}
+    <div class="card">
+      <h2>History</h2>
+      <div class="entry-list">
+        ${list.length? list.map(e=>`
+          <div class="entry">
+            <div>
+              <div class="main">${fmtDate(e.date)}</div>
+              <div class="sub">${e.site||''}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="meta">${e.dose} mg</div>
+              <button class="ghost" data-del-shot="${e.id}">×</button>
+            </div>
+          </div>
+        `).join('') : '<div class="empty">No shots logged yet.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function rangeLabel(rk){
+  return {'7':'Last 7 days','30':'Last 30 days','90':'Last 90 days','all':'All time'}[rk];
+}
+
+function renderProgress(){
+  const s = state.settings;
+  const dates = rangeDates(progressRange);
+  const agg = aggregateForRange(dates);
+  const wChange = weightChangeForRange(dates);
+  const logged = allLoggedDates();
+  const dateForDetail = progressSelectedDate || logged[logged.length-1] || todayKey();
+
+  const calValues = dates.map(dk=>dayTotals(dk).calories);
+  const waterValues = dates.map(dk=>waterForDate(dk));
+
+  const foodDetail = entriesForDate(state.food, dateForDetail).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const exDetail = entriesForDate(state.exercise, dateForDetail).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+  const waterDetailTotal = waterForDate(dateForDetail);
+  const weightDetail = state.weight.find(e=>e.date===dateForDetail);
+  const shotDetail = state.shots.find(e=>e.date===dateForDetail);
+
+  return `
+    <div class="card">
+      <h2>Your archive <small>${rangeLabel(progressRange)}</small></h2>
+      <div class="grid3" style="margin-bottom:14px;">
+        ${['7','30','90','all'].map(rk=>`<button class="ghost ${progressRange===rk?'active-range':''}" data-range="${rk}" style="${progressRange===rk?'background:var(--teal);color:#fff;border-color:var(--teal);':''} padding:8px 6px;">${rk==='all'?'All':rk+'d'}</button>`).join('')}
+      </div>
+      <div class="grid2">
+        <div class="stat"><div class="label">Avg calories/day</div><div class="value">${Math.round(agg.avgCalories)}<small> / ${s.calorieGoal}</small></div></div>
+        <div class="stat"><div class="label">Avg protein/day</div><div class="value">${Math.round(agg.avgProtein)}<small>g / ${s.proteinGoal}g</small></div></div>
+        <div class="stat"><div class="label">Avg fiber/day</div><div class="value">${Math.round(agg.avgFiber)}<small>g / ${s.fiberGoal}g</small></div></div>
+        <div class="stat"><div class="label">Avg water/day</div><div class="value">${Math.round(agg.avgWater)}<small> / ${s.waterGoalOz} oz</small></div></div>
+        <div class="stat"><div class="label">Exercise total</div><div class="value">${agg.totalExerciseMin}<small> min</small></div></div>
+        <div class="stat"><div class="label">Days logged</div><div class="value">${agg.daysWithFood}<small> / ${agg.daysInRange}</small></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Weight change <small>${rangeLabel(progressRange)}</small></h2>
+      ${wChange ? `
+        <div class="stat" style="border:none; background:transparent; padding:0;">
+          <div class="value">${wChange.first} → ${wChange.last} <small>${s.units}</small></div>
+          <div class="pill ${wChange.delta<=0?'good':''}" style="margin-top:6px;">${wChange.delta<=0?'−':'+'}${Math.abs(wChange.delta).toFixed(1)} ${s.units} over ${wChange.count} weigh-ins</div>
+        </div>
+      ` : `<div class="empty">No weigh-ins logged in this window.</div>`}
+      <div class="weight-svg-wrap" style="margin-top:12px;">${weightChartSvg()}</div>
+    </div>
+
+    <div class="card">
+      <h2>Calories per day</h2>
+      ${dailyBarSvg(dates, calValues, {color:'var(--teal)', goal:s.calorieGoal})}
+    </div>
+
+    <div class="card">
+      <h2>Water per day <small>oz</small></h2>
+      ${dailyBarSvg(dates, waterValues, {color:'var(--teal-deep)', goal:s.waterGoalOz})}
+    </div>
+
+    <div class="card">
+      <h2>Look back on a day</h2>
+      <input type="date" id="progress-date" value="${dateForDetail}" max="${todayKey()}" style="margin-bottom:12px;">
+      <div style="font-size:13px; font-weight:600; color:var(--teal-deep); margin-bottom:8px;">${fmtDate(dateForDetail)}</div>
+      <div class="bar-row" style="margin-bottom:10px;">
+        <div class="bar-label"><span class="name">Calories</span><span class="nums">${Math.round(dayTotals(dateForDetail).calories)} / ${s.calorieGoal}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct(dayTotals(dateForDetail).calories,s.calorieGoal)}%"></div></div>
+      </div>
+      <div class="entry-list">
+        ${foodDetail.length ? foodDetail.map(e=>`
+          <div class="entry">
+            <div><div class="main">${escapeHtml(e.name)}</div><div class="sub">${e.time||''} · P${e.protein||0} C${e.carbs||0} F${e.fat||0} · fiber ${e.fiber||0}g</div></div>
+            <div style="display:flex;align-items:center;gap:8px;"><div class="meta">${e.calories} cal</div><button class="ghost" data-del-food-hist="${e.id}">×</button></div>
+          </div>
+        `).join('') : '<div class="empty">No food logged that day.</div>'}
+      </div>
+      <div style="margin-top:12px; display:flex; gap:16px; flex-wrap:wrap; font-size:13px;">
+        <div><span style="color:var(--ink-soft);">Water:</span> <strong>${waterDetailTotal} oz</strong></div>
+        <div><span style="color:var(--ink-soft);">Exercise:</span> <strong>${exDetail.length? exDetail.map(e=>`${escapeHtml(e.type)} (${e.duration}m)`).join(', ') : '—'}</strong></div>
+        <div><span style="color:var(--ink-soft);">Weight:</span> <strong>${weightDetail? weightDetail.weight+' '+s.units : '—'}</strong></div>
+        <div><span style="color:var(--ink-soft);">Shot:</span> <strong>${shotDetail? shotDetail.dose+'mg · '+(shotDetail.site||'') : '—'}</strong></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Export your data</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="primary" id="export-json" style="margin-top:0;">Download full archive (JSON)</button>
+        <button class="ghost" id="export-csv">Download food log (CSV)</button>
+      </div>
+      <div class="footer-note" style="text-align:left; margin-top:8px;">Every entry you've ever logged stays saved — this just gives you a portable copy any time you want one.</div>
+    </div>
+  `;
+}
+
+function renderSettings(){
+  const s = state.settings;
+  return `
+    <div class="card">
+      <h2>Daily goals</h2>
+      <div class="goal-line"><span class="g-label">Calorie goal</span><input id="g-calorieGoal" type="number" value="${s.calorieGoal}"></div>
+      <div class="goal-line"><span class="g-label">Protein goal (g)</span><input id="g-proteinGoal" type="number" value="${s.proteinGoal}"></div>
+      <div class="goal-line"><span class="g-label">Fiber goal (g)</span><input id="g-fiberGoal" type="number" value="${s.fiberGoal}"></div>
+      <div class="goal-line"><span class="g-label">Water goal (oz)</span><input id="g-waterGoalOz" type="number" value="${s.waterGoalOz}"></div>
+    </div>
+    <div class="card">
+      <h2>Weight & shots</h2>
+      <div class="goal-line"><span class="g-label">Units</span>
+        <select id="g-units" style="width:90px;">
+          <option value="lb" ${s.units==='lb'?'selected':''}>lb</option>
+          <option value="kg" ${s.units==='kg'?'selected':''}>kg</option>
+        </select>
+      </div>
+      <div class="goal-line"><span class="g-label">Start weight</span><input id="g-startWeight" type="number" step="0.1" value="${s.startWeight??''}"></div>
+      <div class="goal-line"><span class="g-label">Goal weight</span><input id="g-goalWeight" type="number" step="0.1" value="${s.goalWeight??''}"></div>
+      <div class="goal-line"><span class="g-label">Dose interval (days)</span><input id="g-doseIntervalDays" type="number" value="${s.doseIntervalDays}"></div>
+    </div>
+    <div class="card">
+      <h2>Food search <small>USDA FoodData Central</small></h2>
+      <div class="goal-line"><span class="g-label">API key</span><input id="g-usdaApiKey" type="text" placeholder="paste key here" value="${escapeHtml(s.usdaApiKey||'')}" style="width:180px;"></div>
+      <div class="footer-note" style="text-align:left; margin-top:2px;">Free — get one at <a href="https://api.data.gov/signup/" target="_blank" rel="noopener">api.data.gov/signup</a>. Powers the food search in the Food tab.</div>
+    </div>
+    <div class="card">
+      <h2>Photo analysis <small>for use outside Claude</small></h2>
+      <div class="goal-line"><span class="g-label">Anthropic API key</span><input id="g-anthropicApiKey" type="text" placeholder="sk-ant-..." value="${escapeHtml(s.anthropicApiKey||'')}" style="width:180px;"></div>
+      <div class="footer-note" style="text-align:left; margin-top:2px;">Only needed if you're hosting this app yourself (e.g. GitHub Pages) — inside Claude, photo analysis works without one. Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. Since this key lives in the page's code, keep your repo private or treat it as a key others could see.</div>
+    </div>
+    <button class="primary" id="save-settings">Save goals</button>
+    <div class="footer-note">Everything here is saved privately to your device account and syncs whenever you open this app.</div>
+  `;
+}
+
+function buildAnthropicHeaders(){
+  const key = state.settings.anthropicApiKey;
+  const headers = { "Content-Type": "application/json" };
+  if(key){
+    headers["x-api-key"] = key;
+    headers["anthropic-version"] = "2023-06-01";
+    headers["anthropic-dangerous-direct-browser-access"] = "true";
+  }
+  return headers;
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(r.result.split(',')[1]);
+    r.onerror = ()=> reject(new Error('Could not read file'));
+    r.readAsDataURL(file);
+  });
+}
+
+async function analyzeFoodPhoto(file){
+  photoState.analyzing = true;
+  photoState.error = null;
+  photoState.result = null;
+  render();
+  try{
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || 'image/jpeg';
+    const prompt = `Look at this photo of food and estimate its nutrition. Identify what's shown and estimate a realistic serving size based on what's visible in the photo (use plates, utensils, hands, or packaging for scale if present).
+
+Respond with ONLY a raw JSON object, no markdown code fences, no extra commentary, in exactly this shape:
+{"name": "short description of the food/meal", "calories": number, "protein": number, "carbs": number, "fat": number, "fiber": number, "confidence": "high|medium|low", "notes": "one short sentence about the estimate or assumptions made"}
+
+All macro values are grams, calories in kcal, for the entire visible portion (not per 100g). If multiple distinct foods are visible, combine them into one combined estimate and mention that in notes. If you cannot identify food in the image at all, set name to "Unrecognized" and all numeric fields to 0.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: buildAnthropicHeaders(),
+      body: JSON.stringify({
+        model: state.settings.anthropicApiKey ? "claude-sonnet-5" : "claude-sonnet-4-6",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: [
+            { type:"image", source:{ type:"base64", media_type:mediaType, data:base64 } },
+            { type:"text", text: prompt }
+          ]
+        }]
+      })
+    });
+    if(!response.ok){
+      const bodyText = await response.text().catch(()=> '');
+      throw new Error('API error '+response.status+': '+bodyText.slice(0,200));
+    }
+    const data = await response.json();
+    const textBlock = (data.content||[]).map(b=>b.text||'').join('').trim();
+    const cleaned = textBlock.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(cleaned);
+    photoState.result = parsed;
+  }catch(e){
+    console.error(e);
+    if(!state.settings.anthropicApiKey){
+      photoState.error = "Photo analysis needs an Anthropic API key when running outside Claude — add one in Goals.";
+    } else {
+      photoState.error = "Couldn't analyze that photo — check your API key in Goals, or try another shot.";
+    }
+  }
+  photoState.analyzing = false;
+  render();
+}
+
+function round1(n){ return Math.round(n*10)/10; }
+
+function extractNutrientsFromFood(food){
+  if(food.labelNutrients){
+    const ln = food.labelNutrients;
+    return {
+      calories: (ln.calories&&ln.calories.value)||0,
+      protein: (ln.protein&&ln.protein.value)||0,
+      carbs: (ln.carbohydrates&&ln.carbohydrates.value)||0,
+      fat: (ln.fat&&ln.fat.value)||0,
+      fiber: (ln.fiber&&ln.fiber.value)||0,
+      basis:'perServing'
+    };
+  }
+  const fn = food.foodNutrients||[];
+  const get = (num)=>{ const m = fn.find(n=> String(n.nutrientNumber)===num); return m ? (m.value||0) : 0; };
+  return { calories:get('208'), protein:get('203'), carbs:get('205'), fat:get('204'), fiber:get('291'), basis:'per100g' };
+}
+
+async function searchFoodDb(query){
+  const key = state.settings.usdaApiKey;
+  if(!key){ searchState.error = "Add a free USDA API key in Goals to search."; render(); return; }
+  searchState.loading = true;
+  searchState.error = null;
+  searchState.results = [];
+  render();
+  try{
+    const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&pageSize=8`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('Request failed: '+res.status);
+    const data = await res.json();
+    searchState.results = (data.foods||[]).map(f=>({
+      description:f.description,
+      brandName:f.brandOwner||f.brandName||'',
+      dataType:f.dataType,
+      labelNutrients:f.labelNutrients,
+      foodNutrients:f.foodNutrients
+    }));
+    if(!searchState.results.length){ searchState.error = "No matches — try a simpler search term."; }
+  }catch(e){
+    console.error(e);
+    searchState.error = "Search failed — check your API key or try again.";
+  }
+  searchState.loading = false;
+  render();
+}
+
+function pickFood(food){
+  const nutrients = extractNutrientsFromFood(food);
+  searchState.selected = {
+    name: food.description + (food.brandName ? ' ('+food.brandName+')' : ''),
+    basis: nutrients.basis,
+    base: nutrients,
+    amount: nutrients.basis==='per100g' ? 100 : 1
+  };
+  searchState.results = [];
+  searchState.query = '';
+  render();
+}
+
+function currentSearchValues(){
+  const s = searchState.selected;
+  if(!s) return null;
+  const mult = s.basis==='per100g' ? (s.amount/100) : s.amount;
+  return {
+    name: s.name,
+    calories: Math.round(s.base.calories*mult),
+    protein: round1(s.base.protein*mult),
+    carbs: round1(s.base.carbs*mult),
+    fat: round1(s.base.fat*mult),
+    fiber: round1(s.base.fiber*mult)
+  };
+}
+
+function escapeHtml(str){
+  const d=document.createElement('div'); d.textContent=str??''; return d.innerHTML;
+}
+
+// ---------- event binding per tab ----------
+function bindTabEvents(t){
+  if(t==='food'){
+    document.getElementById('food-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      state.food.push({
+        id:uid(), date:todayKey(),
+        name:fd.get('name'),
+        calories:Number(fd.get('calories'))||0,
+        protein:Number(fd.get('protein'))||0,
+        carbs:Number(fd.get('carbs'))||0,
+        fat:Number(fd.get('fat'))||0,
+        fiber:Number(fd.get('fiber'))||0,
+        time:fd.get('time')
+      });
+      await save('food');
+      resetPhotoState();
+      resetSearchState();
+      render();
+    });
+    document.querySelectorAll('[data-del-food]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.food = state.food.filter(x=>x.id!==b.dataset.delFood);
+      await save('food'); render();
+    }));
+    const photoInput = document.getElementById('photo-input');
+    if(photoInput){
+      photoInput.addEventListener('change', async e=>{
+        const file = e.target.files[0];
+        if(!file) return;
+        photoState.previewUrl = URL.createObjectURL(file);
+        render();
+        await analyzeFoodPhoto(file);
+      });
+    }
+    const retakeBtn = document.getElementById('photo-retake');
+    if(retakeBtn){
+      retakeBtn.addEventListener('click', ()=>{
+        resetPhotoState();
+        render();
+      });
+    }
+    const searchInput = document.getElementById('food-search-input');
+    const searchBtn = document.getElementById('food-search-btn');
+    const runSearch = ()=>{
+      const q = (searchInput.value||'').trim();
+      if(q) searchFoodDb(q);
+    };
+    if(searchBtn) searchBtn.addEventListener('click', runSearch);
+    if(searchInput){
+      searchInput.addEventListener('keydown', e=>{
+        if(e.key==='Enter'){ e.preventDefault(); runSearch(); }
+      });
+    }
+    document.querySelectorAll('[data-pick-food]').forEach(el=>el.addEventListener('click', ()=>{
+      const idx = Number(el.dataset.pickFood);
+      pickFood(searchState.results[idx]);
+    }));
+    const searchClear = document.getElementById('search-clear');
+    if(searchClear) searchClear.addEventListener('click', ()=>{ searchState.selected = null; render(); });
+    const searchAmount = document.getElementById('search-amount');
+    if(searchAmount){
+      searchAmount.addEventListener('input', ()=>{
+        searchState.selected.amount = Number(searchAmount.value)||0;
+        render();
+      });
+    }
+  }
+  if(t==='water'){
+    document.getElementById('water-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      state.water.push({ id:uid(), date:todayKey(), amountOz:Number(fd.get('amountOz'))||0, time:fd.get('time') });
+      await save('water'); render();
+    });
+    document.querySelectorAll('[data-quick-water]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.water.push({ id:uid(), date:todayKey(), amountOz:Number(b.dataset.quickWater), time:new Date().toTimeString().slice(0,5) });
+      await save('water'); render();
+    }));
+    document.querySelectorAll('[data-del-water]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.water = state.water.filter(x=>x.id!==b.dataset.delWater);
+      await save('water'); render();
+    }));
+  }
+  if(t==='exercise'){
+    document.getElementById('ex-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      state.exercise.push({ id:uid(), date:todayKey(), type:fd.get('type'), duration:Number(fd.get('duration'))||0, time:fd.get('time') });
+      await save('exercise'); render();
+    });
+    document.querySelectorAll('[data-del-exercise]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.exercise = state.exercise.filter(x=>x.id!==b.dataset.delExercise);
+      await save('exercise'); render();
+    }));
+  }
+  if(t==='weight'){
+    document.getElementById('weight-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const date = fd.get('date') || todayKey();
+      state.weight = state.weight.filter(x=>x.date!==date);
+      state.weight.push({ id:uid(), date, weight:Number(fd.get('weight')) });
+      if(state.settings.startWeight==null){
+        state.settings.startWeight = Number(fd.get('weight'));
+        await save('settings');
+      }
+      await save('weight'); render();
+    });
+    document.querySelectorAll('[data-del-weight]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.weight = state.weight.filter(x=>x.id!==b.dataset.delWeight);
+      await save('weight'); render();
+    }));
+  }
+  if(t==='shot'){
+    document.getElementById('shot-form').addEventListener('submit', async e=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      state.shots.push({ id:uid(), date:fd.get('date')||todayKey(), dose:Number(fd.get('dose')), site:fd.get('site') });
+      state.settings.defaultDose = Number(fd.get('dose'));
+      await save('settings');
+      await save('shots'); render();
+    });
+    document.querySelectorAll('[data-del-shot]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.shots = state.shots.filter(x=>x.id!==b.dataset.delShot);
+      await save('shots'); render();
+    }));
+  }
+  if(t==='progress'){
+    document.querySelectorAll('[data-range]').forEach(b=>b.addEventListener('click', ()=>{
+      progressRange = b.dataset.range;
+      render();
+    }));
+    const dateInput = document.getElementById('progress-date');
+    if(dateInput){
+      dateInput.addEventListener('change', ()=>{
+        progressSelectedDate = dateInput.value;
+        render();
+      });
+    }
+    document.querySelectorAll('[data-del-food-hist]').forEach(b=>b.addEventListener('click', async ()=>{
+      state.food = state.food.filter(x=>x.id!==b.dataset.delFoodHist);
+      await save('food'); render();
+    }));
+    const exportJsonBtn = document.getElementById('export-json');
+    if(exportJsonBtn) exportJsonBtn.addEventListener('click', exportJSON);
+    const exportCsvBtn = document.getElementById('export-csv');
+    if(exportCsvBtn) exportCsvBtn.addEventListener('click', exportCSV);
+  }
+  if(t==='settings'){
+    document.getElementById('save-settings').addEventListener('click', async ()=>{
+      state.settings.calorieGoal = Number(document.getElementById('g-calorieGoal').value)||DEFAULT_SETTINGS.calorieGoal;
+      state.settings.proteinGoal = Number(document.getElementById('g-proteinGoal').value)||DEFAULT_SETTINGS.proteinGoal;
+      state.settings.fiberGoal = Number(document.getElementById('g-fiberGoal').value)||DEFAULT_SETTINGS.fiberGoal;
+      state.settings.waterGoalOz = Number(document.getElementById('g-waterGoalOz').value)||DEFAULT_SETTINGS.waterGoalOz;
+      state.settings.units = document.getElementById('g-units').value;
+      const sw = document.getElementById('g-startWeight').value;
+      const gw = document.getElementById('g-goalWeight').value;
+      state.settings.startWeight = sw===''? null : Number(sw);
+      state.settings.goalWeight = gw===''? null : Number(gw);
+      state.settings.doseIntervalDays = Number(document.getElementById('g-doseIntervalDays').value)||7;
+      state.settings.usdaApiKey = document.getElementById('g-usdaApiKey').value.trim();
+      state.settings.anthropicApiKey = document.getElementById('g-anthropicApiKey').value.trim();
+      await save('settings');
+      setTab('dashboard');
+    });
+  }
+}
+
+(async function init(){
+  if(firebaseEnabled){
+    render(); // shows loading/auth screen; onAuthStateChanged takes it from here
+  } else {
+    await loadAll();
+    render();
+  }
+})();
+</script>
+</body>
+</html>
